@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Node / Playwright
+node_modules/
+
+# Logs & temp
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor / OS
+.vscode/
+.idea/

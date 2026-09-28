@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowNote · 流程笔记</title><link rel="stylesheet" href="popup.css"></head>
+<body data-state="ready" data-view="workflow">
+  <header class="app-header">
+    <div class="brand"><img class="brand-mark" src="icons/icon48.png" width="34" height="34" alt=""><div><h1>FlowNote · 流程笔记</h1><p>浏览器工作流</p></div></div>
+    <div class="header-actions"><span id="status" class="status" role="status"><i aria-hidden="true"></i><span id="statusText">准备就绪</span></span><button id="settingsToggle" class="settings-button" aria-controls="settingsView" aria-expanded="false" title="网站黑名单设置">设置</button></div>
+  </header>
+  <nav class="flow" aria-label="工作流进度"><span id="flowRecord" class="current"><b>1</b>录制</span><i></i><span id="flowReview"><b>2</b>检查</span><i></i><span id="flowExport"><b>3</b>导出</span></nav>
+  <main id="main">
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section id="settingsView" hidden>
+      <div class="section-intro"><span class="eyebrow">偏好设置</span><h2>让录制按你的习惯工作。</h2><p>设置自动保存在本机，修改后立即生效。</p></div>
+    <details id="blacklistPanel" class="blacklist-panel" open>
+      <summary>网站黑名单 <span id="blacklistCount">默认允许所有网站</span></summary>
+      <p class="hint">普通网页与弹层自动连接。填写域名或粘贴网址，将排除整个网站及其子域名，立即生效。</p>
+      <label class="sr-only" for="blockHost">不录制的网站</label>
+      <div class="note-editor"><input id="blockHost" maxlength="2048" placeholder="例如：example.com"><button id="addBlock" class="secondary">加入</button></div>
+      <ul id="blacklistItems" aria-label="已排除的网站"></ul>
+      <p id="blacklistEmpty" class="settings-empty">黑名单为空，普通网页与弹层均可录制。</p>
+    </details>
+    <div class="settings-info"><strong>仅录制你选定的标签页</strong><p>点击“开始录制”才会采集操作。黑名单会保留，清除录制不会影响这些设置。</p></div>
+    </section>
+    <div id="workView">
+    <section id="setup">
+      <div class="section-intro"><span class="eyebrow">新的开始</span><h2>把操作，变成工作流。</h2><p>演示一次，记录每一步。交给 Codex 整理复用。</p></div>
+      <label class="field" for="title">流程名称<input id="title" maxlength="100" autocomplete="off" placeholder="例如：下载每日经营报表"></label>
+      <label class="field" for="goal">完成目标 <span class="optional">选填</span><textarea id="goal" maxlength="800" placeholder="例如：选择指定日期，下载一份 Excel 报表"></textarea></label>
+      <label class="capture-option" for="capture"><span><strong>保留填写示例</strong><small>开启后，记录普通表单中的输入值</small></span><input id="capture" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <div class="privacy"><span class="privacy-dot" aria-hidden="true"></span><p>录制保存在本机。密码、验证码等常见敏感字段会跳过。</p></div>
+    </section>
+    <section id="review" hidden>
+      <div class="review-heading"><div><span class="eyebrow" id="reviewEyebrow">本次录制</span><h2 id="recordTitle"></h2></div><span id="count" class="step-count"></span></div>
+      <p id="reviewHint" class="hint">检查步骤后导出，交给 Codex 生成 Skill。</p>
+      <section id="routes" class="routes" aria-label="流程分支">
+        <div class="route-select-row"><label for="routeSelect">当前路线</label><select id="routeSelect"><option value="main">主流程</option></select></div>
+        <div id="branchInfo" hidden><p id="branchOrigin"></p><p id="branchCondition"></p><div class="branch-tools"><button id="editBranch" class="text-button">编辑分支条件</button><button id="removeBranch" class="text-button">删除此分支</button></div></div>
+        <details id="routeMap" hidden><summary>查看全部路线 <span id="branchCount"></span></summary><div id="routeTree"></div><p class="hint">满足条件时走分支；否则继续原路线。分支结束后不自动回到原路线。</p></details>
+      </section>
+      <section id="coverage" class="coverage" hidden>
+        <div class="coverage-header"><span class="coverage-dot" aria-hidden="true"></span><strong id="coverageCount"></strong><button id="scan" class="text-button" title="重新检查弹层和嵌入页面">重新扫描弹层</button></div>
+        <div id="missingFrames"></div>
+      </section>
+      <div class="list-heading"><h3>操作步骤</h3><span>点击步骤查看详情</span></div>
+      <p id="sharedPrefix" class="shared-prefix" hidden></p>
+      <div id="emptySteps" class="empty" hidden>还没有操作步骤，回到网页开始演示吧。</div>
+      <ol id="steps" aria-label="录制步骤"></ol>
+      <details id="notePanel" class="note-panel"><summary>补充操作说明 <span>选填</span></summary><label class="sr-only" for="note">补充操作说明</label><div class="note-editor"><input id="note" maxlength="500" placeholder="例如：每次运行时选择不同日期"><button id="addNote" class="secondary">添加</button></div></details>
+    </section>
+    </div>
+  </main>
+  <footer class="action-bar">
+    <div class="action-buttons"><button id="start" class="primary"><span class="record-dot" aria-hidden="true"></span>开始录制当前页</button><button id="stop" class="stop" hidden><span class="stop-square" aria-hidden="true"></span>停止录制</button><button id="resume" class="secondary" hidden>继续录制当前页</button><button id="export" class="primary" hidden>导出录制 JSON <span aria-hidden="true">↗</span></button></div>
+    <button id="clear" class="delete-recording" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>清除本次录制</button>
+    <div class="footer-meta"><span id="footerHint">只录制你选定的标签页</span><span id="version">v0.5.3</span></div>
+  </footer>
+  <dialog id="branchDialog" aria-labelledby="branchDialogTitle">
+    <form id="branchForm">
+      <h2 id="branchDialogTitle">创建分支</h2>
+      <p id="branchDialogHint" class="hint"></p>
+      <label class="field" for="branchName">分支名称<input id="branchName" maxlength="80" placeholder="例如：没有数据时"></label>
+      <label class="field" for="branchRule">什么情况下走这条分支<textarea id="branchRule" maxlength="500" required placeholder="例如：点击查询后，页面显示暂无数据"></textarea></label>
+      <p id="branchError" class="branch-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button type="button" id="cancelBranch" class="secondary">取消</button><button type="submit" id="saveBranch" class="primary">创建分支</button></div>
+    </form>
+  </dialog>
+  <script src="core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
