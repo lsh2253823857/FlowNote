@@ -15,3 +15,8 @@ Thumbs.db
 .vscode/
 .idea/
 teleprompter/tests/*.png
+android-app/.gradle/
+android-app/local.properties
+android-app/app/build/
+.tools/
+dist/*.apk

@@ -100,6 +100,10 @@ function frame(time) {
 }
 
 async function requestWakeLock() {
+  if (window.AndroidTeleprompter?.keepScreenOn) {
+    window.AndroidTeleprompter.keepScreenOn(true);
+    return;
+  }
   if (!('wakeLock' in navigator) || state.wakeLock) return;
   try {
     state.wakeLock = await navigator.wakeLock.request('screen');
@@ -108,6 +112,10 @@ async function requestWakeLock() {
 }
 
 async function releaseWakeLock() {
+  if (window.AndroidTeleprompter?.keepScreenOn) {
+    window.AndroidTeleprompter.keepScreenOn(false);
+    return;
+  }
   try { await state.wakeLock?.release(); } catch { /* already released */ }
   state.wakeLock = null;
 }
@@ -165,6 +173,10 @@ function beginCountdown() {
 
 async function applyPreferredOrientation() {
   if (!state.settings.landscape) return;
+  if (window.AndroidTeleprompter?.setLandscape) {
+    window.AndroidTeleprompter.setLandscape(true);
+    return;
+  }
   let locked = false;
   try {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -199,6 +211,7 @@ async function closePrompt() {
   clearTimeout(state.countdownTimer);
   $('countdown').hidden = true;
   setPlaying(false);
+  if (window.AndroidTeleprompter?.setLandscape) window.AndroidTeleprompter.setLandscape(false);
   try { screen.orientation?.unlock?.(); } catch { /* not locked */ }
   if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
   $('promptScreen').hidden = true;
