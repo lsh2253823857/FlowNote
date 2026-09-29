@@ -19,6 +19,8 @@ Same-tab HTTP(S) navigation, including cross-site navigation, continues automati
 
 The user stops recording, reviews/removes unwanted steps, adds any success criteria or variable-input notes, then exports JSON. Ask for the exported file or its local path when it is missing. Do not search all Downloads or read unrelated recordings without task context. Recording data is local until supplied to Codex, where normal Codex data handling applies.
 
+While stopped, **等待** beside any step inserts a fixed delay after that step on the currently selected route. Accept only an integer from 1 through 3600 seconds. A wait is a separate, removable step and is exported with its `seconds` value. It does not propagate to sibling or child routes. Elapsed time is not evidence that the page is ready; replay must still inspect live state when readiness affects correctness.
+
 ## Conditional branches
 
 Version 0.5 adds branching. After stopping, the user clicks **分支** beside a step, names the alternative and supplies a condition. The fork occurs after that step. The original suffix stays intact. The user manually restores the web page to the anchor's completed state, then presses **继续录制此分支**. The recorder does not restore page state or evaluate conditions. **当前路线** switches the selected route while stopped; **查看全部路线** shows the structure. Up to 20 branches, including siblings and nested branches, share the total recording limit. Deleting a branch deletes its descendants; a referenced anchor cannot be deleted first. The exported JSON includes every route regardless of which is selected.
@@ -44,5 +46,7 @@ At replay, execute the common prefix once and evaluate outgoing conditions again
 Read the generated skill. Match the user's intent and supply new runtime parameters. Use whichever documented browser-control capability is actually available, such as Codex browser control or Kimi WebBridge. If choosing Kimi WebBridge and its skill is installed, load that skill before use.
 
 Recorded selectors are hints: obtain a fresh page snapshot and re-identify the element. For child-frame actions, identify the live iframe using its URL and parent context; frame IDs and document IDs do not survive into a new session. Use tools that support acting inside that frame. The ability to record an iframe does not prove that a particular browser-control tool can replay it. If frame actions are unsupported, explain that limitation; never substitute the same selector in the main page. Do not blindly replay every event, duplicate a submit, reuse example inputs as defaults, or navigate to `[parameter]` URLs. Wait for the live page result and verify it. A demonstration alone does not authorize later external mutations; apply the current user's request and existing authorization. If a result is ambiguous after submission, inspect it before retrying.
+
+For an explicit `wait` action, pause once for the recorded integer `seconds` before continuing. Do not treat the delay as a success or readiness check, and do not apply it to another route unless that route contains its own wait step.
 
 The plugin contains no network listener, credential store, custom MCP server, or separate model API. Its recorder can be tested and used offline against a local test page; Codex provides the interpretation and browser execution.

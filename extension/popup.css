@@ -169,15 +169,16 @@ select:focus-visible { outline: 3px solid #0071e360; outline-offset: 3px; }
 #routeMap .hint { font-size: 10px; margin-top: 9px; }
 .shared-prefix { padding: 10px 12px; margin: 10px 0; border: 1px dashed #c8d8ef; border-radius: 9px; font-size: 11px; color: #536c91; overflow-wrap: anywhere; }
 .step-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-.fork-step { background: #edf4ff; border: 0; border-radius: 6px; padding: 4px 6px; font-size: 10px; color: var(--blue); }
+.fork-step, .wait-step { background: #edf4ff; border: 0; border-radius: 6px; padding: 4px 6px; font-size: 10px; color: var(--blue); }
+.wait-step { background: #f1efff; color: #6554c0; }
 .branch-link { display: block; margin-top: 7px; background: transparent; border: 0; padding: 3px 0; text-align: left; font-size: 11px; color: var(--blue); overflow-wrap: anywhere; }
-#branchDialog { width: calc(100% - 40px); max-width: 400px; max-height: calc(100% - 40px); padding: 22px; border: 1px solid #dedee5; border-radius: 18px; background: #f5f5f7; color: var(--ink); box-shadow: 0 18px 60px #0003; }
-#branchDialog::backdrop { background: #15152655; backdrop-filter: blur(3px); }
-#branchDialog h2 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.4px; }
-#branchDialog .hint { margin-bottom: 18px; }
+#branchDialog, #waitDialog { width: calc(100% - 40px); max-width: 400px; max-height: calc(100% - 40px); padding: 22px; border: 1px solid #dedee5; border-radius: 18px; background: #f5f5f7; color: var(--ink); box-shadow: 0 18px 60px #0003; }
+#branchDialog::backdrop, #waitDialog::backdrop { background: #15152655; backdrop-filter: blur(3px); }
+#branchDialog h2, #waitDialog h2 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.4px; }
+#branchDialog .hint, #waitDialog .hint { margin-bottom: 18px; }
 #branchDialog textarea { height: 84px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .dialog-actions button { min-height: 40px; min-width: 84px; }
-.branch-error { font-size: 12px; color: var(--red); }
+.branch-error, .dialog-error { font-size: 12px; color: var(--red); }
 
 img.brand-mark { border: 0; background: transparent; border-radius: 0; display: block; }

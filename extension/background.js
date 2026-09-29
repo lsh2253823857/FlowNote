@@ -142,7 +142,7 @@ async function handle(message, sender) {
     return state();
   }
   if (message.type === 'CLEAR') { await stop(active); await chrome.storage.local.remove('draft'); return state(); }
-  if (['CREATE_BRANCH','SELECT_ROUTE','UPDATE_BRANCH','REMOVE_BRANCH','REMOVE_STEP'].includes(message.type)) {
+  if (['CREATE_BRANCH','SELECT_ROUTE','UPDATE_BRANCH','REMOVE_BRANCH','REMOVE_STEP','INSERT_WAIT'].includes(message.type)) {
     if (active) throw new Error('请先停止录制，再创建分支、切换路线或编辑。');
     if (!draft) throw new Error('请先创建录制。');
     const routeId = draft.selectedRouteId || 'main';
@@ -175,6 +175,13 @@ async function handle(message, sender) {
     if (message.type === 'REMOVE_STEP') {
       if ((draft.branches || []).some(b=>b.afterStepId===message.id)) throw new Error('这一步是分支起点，请先删除它关联的分支。');
       const index=steps.findIndex(s=>s.id===message.id);if(index>=0)steps.splice(index,1);
+    }
+    if (message.type === 'INSERT_WAIT') {
+      if (WRR.allSteps(draft).length >= 1500 || JSON.stringify(draft).length > 3500000) throw new Error('录制已达到容量上限，请导出后新建录制。');
+      if (!Number.isInteger(message.seconds) || message.seconds < 1 || message.seconds > 3600) throw new Error('等待时间必须是 1 到 3600 秒的整数');
+      const after=steps.find(step=>step.id===message.afterStepId);
+      if (!after) throw new Error('找不到要插入等待的位置');
+      WRR.insertAfter(draft,message.afterStepId,{action:'wait',seconds:message.seconds,url:after.url,target:{},at:new Date().toISOString()},routeId);
     }
     await chrome.storage.local.set({draft});return state();
   }

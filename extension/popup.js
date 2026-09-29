@@ -2,6 +2,7 @@ const $ = id => document.getElementById(id);
 let blacklistSignature = '';
 let current, busy = false, stepSignature = '', coverageSignature = '', exportedId = null;
 let workflowScroll = 0, routeSignature = '', branchEditor = null;
+let waitAfterStepId = null;
 function setSettings(open) {
   if (open) workflowScroll = $('main').scrollTop;
   document.body.dataset.view = open ? 'settings' : 'workflow';
@@ -12,7 +13,7 @@ function setSettings(open) {
   $('settingsToggle').title = open ? '返回录制' : '网站黑名单设置';
   $('main').scrollTop = open ? 0 : workflowScroll;
 }
-const labels = {navigate:'打开页面',click:'点击',fill:'填写',select:'选择',check:'勾选',submit:'提交表单',keypress:'按键',manual:'手动步骤',note:'补充说明'};
+const labels = {navigate:'打开页面',click:'点击',fill:'填写',select:'选择',check:'勾选',submit:'提交表单',keypress:'按键',manual:'手动步骤',note:'补充说明',wait:'等待'};
 const reasons = {
   'Recording started':'开始录制',
   'Recording continued here; actions during pause were not captured':'从当前页继续；暂停期间的操作未记录',
@@ -27,7 +28,7 @@ function showNotice(message, success=false) {
 }
 function displayUrl(raw) { try { const u=new URL(raw);return u.hostname+(u.pathname==='/'?'':u.pathname); } catch { return raw || ''; } }
 function stepDescription(step) {
-  return step.note || reasons[step.reason] || step.reason || (Object.hasOwn(step,'value') ? `填写示例：${step.value}` : step.parameter ? '执行时提供这个字段的值' : step.key ? `按下 ${step.key}` : step.action==='check' ? (step.checked ? '设为已选中' : '取消选中') : displayUrl(step.url));
+  return step.note || reasons[step.reason] || step.reason || (step.action==='wait' ? `等待 ${step.seconds} 秒` : Object.hasOwn(step,'value') ? `填写示例：${step.value}` : step.parameter ? '执行时提供这个字段的值' : step.key ? `按下 ${step.key}` : step.action==='check' ? (step.checked ? '设为已选中' : '取消选中') : displayUrl(step.url));
 }
 async function request(type, extra = {}) {
   const result = await chrome.runtime.sendMessage({type,...extra});
@@ -57,6 +58,12 @@ function openBranchEditor(stepId, branch = null) {
   $('branchName').value=branch?.name || '';$('branchRule').value=branch?.condition || '';
   $('branchError').hidden=true;$('saveBranch').textContent=branch ? '保存修改' : '创建分支';
   $('branchDialog').showModal();$('branchRule').focus();
+}
+function openWaitEditor(stepId) {
+  if (busy || current?.active) return;
+  waitAfterStepId=stepId;$('waitSeconds').value='5';$('waitError').hidden=true;
+  $('waitDialogHint').textContent=`在第 ${stepId} 步完成后、下一步开始前等待。`;
+  $('waitDialog').showModal();$('waitSeconds').focus();$('waitSeconds').select();
 }
 function selectRoute(routeId) {
   return run(async()=>{const result=await request('SELECT_ROUTE',{routeId});$('main').scrollTop=0;return result;});
@@ -108,7 +115,7 @@ function renderSteps(draft,active) {
     const li=document.createElement('li'),index=document.createElement('span'),main=document.createElement('div'),details=document.createElement('details'),summary=document.createElement('summary'),meta=document.createElement('div'),subtitle=document.createElement('div');
     index.className='step-index';index.textContent=step.id;index.setAttribute('aria-hidden','true');
     main.className='step-main';details.className='step-details';details.dataset.key=String(step.id);details.open=opened.has(details.dataset.key);
-    const target=step.target?.name || step.target?.label || step.target?.placeholder || step.target?.fieldName || (step.action==='navigate' ? displayUrl(step.url) : '');
+    const target=step.action==='wait' ? `${step.seconds} 秒` : step.target?.name || step.target?.label || step.target?.placeholder || step.target?.fieldName || (step.action==='navigate' ? displayUrl(step.url) : '');
     summary.textContent=`${labels[step.action] || step.action}${target ? ' · '+target : ''}`;
     if(step.frame?.id>0 || step.action==='manual') {const tag=document.createElement('span');tag.className='step-tag'+(step.action==='manual'?' manual':'');tag.textContent=step.action==='manual'?'需手动':'弹层';summary.appendChild(tag);}
     const description=stepDescription(step);subtitle.className='step-subtitle';subtitle.textContent=description;
@@ -116,10 +123,11 @@ function renderSteps(draft,active) {
     details.append(summary,meta);main.appendChild(details);
     const children=branches.filter(b=>b.parentBranchId===routeId && b.afterStepId===step.id);
     if(!active) {
-      const actions=document.createElement('div'),fork=document.createElement('button'),del=document.createElement('button');actions.className='step-actions';
+      const actions=document.createElement('div'),wait=document.createElement('button'),fork=document.createElement('button'),del=document.createElement('button');actions.className='step-actions';
+      wait.textContent='等待';wait.className='wait-step';wait.setAttribute('aria-label',`在第 ${step.id} 步后添加等待`);wait.addEventListener('click',()=>openWaitEditor(step.id));
       fork.textContent='分支';fork.className='fork-step';fork.setAttribute('aria-label',`从第 ${step.id} 步创建分支`);fork.addEventListener('click',()=>openBranchEditor(step.id));
       del.textContent='删除';del.className='delete';del.setAttribute('aria-label',`删除第 ${step.id} 步`);del.disabled=!!children.length;if(children.length)del.title='先删除关联分支，才能删除起点';
-      del.addEventListener('click',()=>run(async()=>{exportedId=null;return request('REMOVE_STEP',{id:step.id});}));actions.append(fork,del);main.append(actions);
+      del.addEventListener('click',()=>run(async()=>{exportedId=null;return request('REMOVE_STEP',{id:step.id});}));actions.append(wait,fork,del);main.append(actions);
     }
     li.append(index,main,subtitle);
     for(const branch of children){const link=document.createElement('button');link.className='branch-link';link.textContent='↳ '+branch.name;link.disabled=!!active;link.addEventListener('click',()=>selectRoute(branch.id));li.append(link);}
@@ -197,6 +205,17 @@ $('branchForm').addEventListener('submit',event=>{
       exportedId=null;$('branchDialog').close();$('main').scrollTop=0;return result;
     } catch(error){$('branchError').textContent=error.message;$('branchError').hidden=false;}
     finally{$('saveBranch').disabled=false;}
+  });
+});
+$('cancelWait').addEventListener('click',()=>$('waitDialog').close());
+$('waitForm').addEventListener('submit',event=>{
+  event.preventDefault();run(async()=>{
+    $('saveWait').disabled=true;
+    try {
+      const result=await request('INSERT_WAIT',{afterStepId:waitAfterStepId,seconds:Number($('waitSeconds').value)});
+      exportedId=null;$('waitDialog').close();return result;
+    } catch(error){$('waitError').textContent=error.message;$('waitError').hidden=false;}
+    finally{$('saveWait').disabled=false;}
   });
 });
 $('clear').addEventListener('click',()=>run(async()=>{if(confirm('清除本次录制及所有分支？请先导出需要保留的内容。'))return request('CLEAR');}));

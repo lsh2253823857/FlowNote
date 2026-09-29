@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FlowNote · 流程笔记",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Record an explicitly selected browser tab for reusable Codex skills. Local storage only.",
   "minimum_chrome_version": "114",
   "permissions": [

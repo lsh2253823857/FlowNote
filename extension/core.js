@@ -14,7 +14,7 @@
   }
   function short(value, max = 180) { return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max); }
   function normalizeEvent(raw, captureValues) {
-    if (!raw || !['navigate','click','fill','select','check','submit','keypress','manual','note'].includes(raw.action)) return null;
+    if (!raw || !['navigate','click','fill','select','check','submit','keypress','manual','note','wait'].includes(raw.action)) return null;
     const url = cleanUrl(raw.url);
     if (!url) return null;
     const t = raw.target || {};
@@ -39,6 +39,10 @@
     if (raw.href) event.href = cleanUrl(raw.href);
     if (raw.action === 'navigate' && raw.reason) event.reason = short(raw.reason, 300);
     if (raw.action === 'click' && raw.submitLike) event.submitLike = true;
+    if (raw.action === 'wait') {
+      if (!Number.isInteger(raw.seconds) || raw.seconds < 1 || raw.seconds > 3600) return null;
+      event.seconds = raw.seconds;
+    }
     return event;
   }
   function append(steps, event) {
@@ -100,6 +104,14 @@
     else append(steps, event);
     if (steps.length > before) { steps.at(-1).id = next; draft.nextStepId = next + 1; }
   }
+  function insertAfter(draft, afterStepId, event, routeId = draft.selectedRouteId || 'main') {
+    const steps = routeSteps(draft, routeId), index = steps.findIndex(step => step.id === afterStepId);
+    if (index < 0) throw new Error('找不到要插入等待的位置');
+    const next = Math.max(draft.nextStepId || 1, ...allSteps(draft).map(step => step.id + 1));
+    steps.splice(index + 1, 0, {...event, id:next});
+    draft.nextStepId = next + 1;
+    return steps[index + 1];
+  }
   function branchDescendants(draft, branchId) {
     const ids = new Set([branchId]);
     for (let i = 0; i < (draft.branches || []).length; i++) {
@@ -107,7 +119,7 @@
     }
     return ids;
   }
-  const api = { sensitive, cleanUrl, short, normalizeEvent, append, blacklistHost, isBlocked, blockedFrame, routeSteps, routePath, allSteps, appendToRoute, branchDescendants };
+  const api = { sensitive, cleanUrl, short, normalizeEvent, append, blacklistHost, isBlocked, blockedFrame, routeSteps, routePath, allSteps, appendToRoute, insertAfter, branchDescendants };
   root.WRR = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(globalThis);
