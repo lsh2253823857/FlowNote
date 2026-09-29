@@ -1,4 +1,4 @@
-const CACHE = 'shunci-v3';
+const CACHE = 'shunci-v4';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './core.mjs',
   './manifest.webmanifest', './icons/icon.svg'

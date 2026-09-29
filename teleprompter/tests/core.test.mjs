@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { estimatedSeconds, formatDuration, nextOffset, normalizeSettings, pixelsPerSecond, scrollProgress, visibleLength } from '../core.mjs';
+import { estimatedSeconds, formatDuration, nextOffset, normalizeSettings, offsetFromDrag, pixelsPerSecond, scrollProgress, visibleLength } from '../core.mjs';
 
 assert.equal(visibleLength('你好，\n 世界'), 5);
 assert.equal(estimatedSeconds('一'.repeat(180), 180), 60);
@@ -9,5 +9,6 @@ assert.equal(pixelsPerSecond(180, 42), 15.12);
 assert.equal(nextOffset(95, 1000, 180, 42, 100), 100);
 assert.equal(scrollProgress(25, 100), 0.25);
 assert.equal(scrollProgress(0, 0), 1);
+assert.equal(offsetFromDrag(500, 200, 1000), 270);
 
-console.log('core.test.mjs: 8 assertions passed');
+console.log('core.test.mjs: 9 assertions passed');

@@ -78,6 +78,20 @@ try {
   await delay(500);
   const promptMetrics = await evaluate(`({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,playing:document.querySelector('#promptScreen').dataset.playing})`);
   if (promptMetrics.scrollWidth > promptMetrics.width || promptMetrics.playing !== 'true') throw new Error(`Prompt smoke failed: ${JSON.stringify(promptMetrics)}`);
+  const seekMetrics = await evaluate(`(() => {
+    const slider = document.querySelector('#progressSlider');
+    const zone = document.querySelector('#readingZone');
+    slider.dispatchEvent(new PointerEvent('pointerdown', {pointerId:7,isPrimary:true,bubbles:true}));
+    slider.value = '700';
+    slider.dispatchEvent(new Event('input', {bubbles:true}));
+    slider.dispatchEvent(new PointerEvent('pointerup', {pointerId:7,isPrimary:true,bubbles:true}));
+    const afterSlider = Number(slider.value);
+    zone.dispatchEvent(new PointerEvent('pointerdown', {pointerId:8,isPrimary:true,clientY:180,bubbles:true}));
+    zone.dispatchEvent(new PointerEvent('pointermove', {pointerId:8,isPrimary:true,clientY:330,bubbles:true,cancelable:true}));
+    zone.dispatchEvent(new PointerEvent('pointerup', {pointerId:8,isPrimary:true,clientY:330,bubbles:true}));
+    return {afterSlider, afterDrag:Number(slider.value), playing:document.querySelector('#promptScreen').dataset.playing};
+  })()`);
+  if (seekMetrics.afterSlider !== 700 || seekMetrics.afterDrag >= seekMetrics.afterSlider || seekMetrics.playing !== 'true') throw new Error(`Seek controls failed: ${JSON.stringify(seekMetrics)}`);
   await screenshot('prompt-412x915.png');
 
   await evaluate(`document.querySelector('#backButton').click(); true`);
@@ -107,7 +121,7 @@ try {
   const offline = await evaluate(`({title:document.title,textLength:document.querySelector('#scriptInput')?.value.length || 0})`);
   if (offline.title !== '顺词 · 手机提词器' || offline.textLength < 10) throw new Error(`Offline reload failed: ${JSON.stringify(offline)}`);
   await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
-  console.log(JSON.stringify({ editorMetrics, promptMetrics, compactMetrics, landscapeMetrics, serviceWorker, offline, screenshots: output }, null, 2));
+  console.log(JSON.stringify({ editorMetrics, promptMetrics, seekMetrics, compactMetrics, landscapeMetrics, serviceWorker, offline, screenshots: output }, null, 2));
 } finally {
   socket?.close();
   browser.kill();

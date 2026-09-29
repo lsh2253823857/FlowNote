@@ -107,7 +107,7 @@
         </button>
         <div class="prompt-status">
           <span id="playState"><i></i> 准备</span>
-          <div class="progress-track"><i id="progressBar"></i></div>
+          <input class="progress-track" id="progressSlider" type="range" min="0" max="1000" value="0" aria-label="拖动调整提词进度">
         </div>
         <button class="glass-button" id="fullscreenButton" type="button" aria-label="全屏">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></svg>
@@ -116,6 +116,7 @@
 
       <div class="reading-zone" id="readingZone" tabindex="0" role="button" aria-label="点击暂停或继续">
         <div class="focus-line" aria-hidden="true"><span></span></div>
+        <div class="gesture-hint" id="gestureHint" aria-hidden="true">上下拖动 · 调整进度</div>
         <article id="scriptDisplay"></article>
         <div class="finish-card" id="finishCard" hidden>
           <span>TAKE COMPLETE</span>

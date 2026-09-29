@@ -42,3 +42,7 @@ export function nextOffset(current, elapsedMs, charsPerMinute, fontSize, maximum
   const next = current + pixelsPerSecond(charsPerMinute, fontSize) * Math.max(0, elapsedMs) / 1000;
   return Math.min(Math.max(0, maximum), next);
 }
+
+export function offsetFromDrag(startOffset, deltaY, maximum, sensitivity = 1.15) {
+  return clamp(startOffset - deltaY * sensitivity, 0, Math.max(0, maximum));
+}

@@ -1,6 +1,6 @@
 import {
   LIMITS, clamp, estimatedSeconds, formatDuration, nextOffset,
-  normalizeSettings, scrollProgress, visibleLength
+  normalizeSettings, offsetFromDrag, scrollProgress, visibleLength
 } from './core.mjs';
 
 const STORAGE_KEY = 'shunci-teleprompter-v1';
@@ -15,7 +15,10 @@ const state = {
   countdownTimer: 0,
   wakeLock: null,
   installPrompt: null,
-  toastTimer: 0
+  toastTimer: 0,
+  scrub: { active: false, pointerId: null, startY: 0, startOffset: 0, wasPlaying: false, moved: false },
+  suppressClickUntil: 0,
+  seekWasPlaying: false
 };
 
 const sample = `大家好，今天想和你分享一个很实用的小方法。\n\n面对镜头时，不要急着把每句话都背下来。先想清楚你最想让观众记住什么，再用自己的话把它讲出来。\n\n提词器不是为了让你念稿，而是帮你在忘词的时候，快速找回节奏。看着镜头，放慢一点，就像在和屏幕对面的一个朋友聊天。\n\n准备好了吗？深呼吸，我们现在开始。`;
@@ -85,7 +88,8 @@ function measureScroll() {
 function applyOffset() {
   $('scriptDisplay').style.translate = `0 ${-state.offset}px`;
   const progress = scrollProgress(state.offset, state.maximum);
-  $('progressBar').style.width = `${progress * 100}%`;
+  $('progressSlider').value = String(Math.round(progress * 1000));
+  $('progressSlider').style.setProperty('--progress', `${progress * 100}%`);
   if (progress >= 1 && state.playing) finish();
 }
 
@@ -137,6 +141,63 @@ function setPlaying(playing) {
 }
 
 function togglePlaying() { setPlaying(!state.playing); }
+
+function beginScrub(event) {
+  if (!event.isPrimary || !$('countdown').hidden || !$('finishCard').hidden) return;
+  state.scrub = {
+    active: true,
+    pointerId: event.pointerId,
+    startY: event.clientY,
+    startOffset: state.offset,
+    wasPlaying: state.playing,
+    moved: false
+  };
+  if (state.playing) setPlaying(false);
+  $('readingZone').classList.add('scrubbing');
+  try { $('readingZone').setPointerCapture(event.pointerId); } catch { /* Synthetic events and older WebViews may not capture. */ }
+}
+
+function moveScrub(event) {
+  if (!state.scrub.active || event.pointerId !== state.scrub.pointerId) return;
+  const deltaY = event.clientY - state.scrub.startY;
+  if (Math.abs(deltaY) < 4 && !state.scrub.moved) return;
+  state.scrub.moved = true;
+  event.preventDefault();
+  state.offset = offsetFromDrag(state.scrub.startOffset, deltaY, state.maximum);
+  $('playState').innerHTML = '<i></i> 调整进度';
+  applyOffset();
+}
+
+function endScrub(event) {
+  if (!state.scrub.active || event.pointerId !== state.scrub.pointerId) return;
+  const { moved, wasPlaying } = state.scrub;
+  state.scrub.active = false;
+  $('readingZone').classList.remove('scrubbing');
+  try { $('readingZone').releasePointerCapture(event.pointerId); } catch { /* not captured */ }
+  if (moved) state.suppressClickUntil = performance.now() + 400;
+  if (wasPlaying) setPlaying(true);
+  else if (moved) $('playState').innerHTML = '<i></i> 已暂停';
+}
+
+function beginSliderSeek() {
+  state.seekWasPlaying = state.playing;
+  if (state.playing) setPlaying(false);
+  $('progressSlider').classList.add('seeking');
+}
+
+function updateSliderSeek() {
+  state.offset = state.maximum * Number($('progressSlider').value) / 1000;
+  $('finishCard').hidden = true;
+  $('playState').innerHTML = '<i></i> 调整进度';
+  applyOffset();
+}
+
+function endSliderSeek() {
+  $('progressSlider').classList.remove('seeking');
+  if (state.seekWasPlaying) setPlaying(true);
+  else $('playState').innerHTML = '<i></i> 已暂停';
+  state.seekWasPlaying = false;
+}
 
 function finish() {
   setPlaying(false);
@@ -252,8 +313,20 @@ function bind() {
   $('backButton').addEventListener('click', closePrompt);
   $('fullscreenButton').addEventListener('click', toggleFullscreen);
   $('playButton').addEventListener('click', togglePlaying);
-  $('readingZone').addEventListener('click', togglePlaying);
+  $('readingZone').addEventListener('pointerdown', beginScrub);
+  $('readingZone').addEventListener('pointermove', moveScrub);
+  $('readingZone').addEventListener('pointerup', endScrub);
+  $('readingZone').addEventListener('pointercancel', endScrub);
+  $('readingZone').addEventListener('click', () => {
+    if (performance.now() < state.suppressClickUntil) return;
+    togglePlaying();
+  });
   $('readingZone').addEventListener('keydown', event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); togglePlaying(); } });
+  $('progressSlider').addEventListener('pointerdown', beginSliderSeek);
+  $('progressSlider').addEventListener('input', updateSliderSeek);
+  $('progressSlider').addEventListener('pointerup', endSliderSeek);
+  $('progressSlider').addEventListener('pointercancel', endSliderSeek);
+  $('progressSlider').addEventListener('change', updateSliderSeek);
   $('replayButton').addEventListener('click', () => { resetPlayback(); beginCountdown(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && state.playing) setPlaying(false); });
   window.addEventListener('resize', () => { if (!$('promptScreen').hidden) requestAnimationFrame(measureScroll); });
