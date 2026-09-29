@@ -9,6 +9,7 @@ export function normalizeSettings(value = {}) {
     speed: clamp(value.speed ?? 180, ...LIMITS.speed),
     fontSize: clamp(value.fontSize ?? 42, ...LIMITS.fontSize),
     mirror: Boolean(value.mirror),
+    landscape: Boolean(value.landscape),
     countdown: value.countdown !== false
   };
 }
@@ -41,4 +42,3 @@ export function nextOffset(current, elapsedMs, charsPerMinute, fontSize, maximum
   const next = current + pixelsPerSecond(charsPerMinute, fontSize) * Math.max(0, elapsedMs) / 1000;
   return Math.min(Math.max(0, maximum), next);
 }
-

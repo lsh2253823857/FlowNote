@@ -87,6 +87,17 @@ try {
   if (compactMetrics.scrollWidth > compactMetrics.width) throw new Error(`Compact editor overflows: ${JSON.stringify(compactMetrics)}`);
   await screenshot('editor-360x800.png');
 
+  await send('Emulation.setDeviceMetricsOverride', { width: 915, height: 412, deviceScaleFactor: 1, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } });
+  await evaluate(`document.querySelector('#landscapeToggle').click(); document.querySelector('#startButton').click(); true`);
+  await delay(450);
+  await evaluate(`document.querySelector('#toast').classList.remove('visible'); true`);
+  await delay(300);
+  const landscapeMetrics = await evaluate(`({width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,playing:document.querySelector('#promptScreen').dataset.playing,landscape:matchMedia('(orientation: landscape)').matches})`);
+  if (landscapeMetrics.scrollWidth > landscapeMetrics.width || !landscapeMetrics.landscape || landscapeMetrics.playing !== 'true') throw new Error(`Landscape mode failed: ${JSON.stringify(landscapeMetrics)}`);
+  await screenshot('prompt-915x412.png');
+  await evaluate(`document.querySelector('#backButton').click(); true`);
+  await delay(200);
+
   const serviceWorker = await evaluate(`(async () => { const registration = await navigator.serviceWorker.ready; await new Promise(resolve => setTimeout(resolve, 200)); return { active: registration.active?.state, controlled: Boolean(navigator.serviceWorker.controller) }; })()`);
   if (serviceWorker.active !== 'activated' || !serviceWorker.controlled) throw new Error(`Service worker not ready: ${JSON.stringify(serviceWorker)}`);
   await send('Network.enable');
@@ -96,7 +107,7 @@ try {
   const offline = await evaluate(`({title:document.title,textLength:document.querySelector('#scriptInput')?.value.length || 0})`);
   if (offline.title !== '顺词 · 手机提词器' || offline.textLength < 10) throw new Error(`Offline reload failed: ${JSON.stringify(offline)}`);
   await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
-  console.log(JSON.stringify({ editorMetrics, promptMetrics, compactMetrics, serviceWorker, offline, screenshots: output }, null, 2));
+  console.log(JSON.stringify({ editorMetrics, promptMetrics, compactMetrics, landscapeMetrics, serviceWorker, offline, screenshots: output }, null, 2));
 } finally {
   socket?.close();
   browser.kill();

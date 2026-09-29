@@ -210,6 +210,38 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   .mini-control span { display: none; }
 }
 
+@media (orientation: landscape) and (max-height: 600px) {
+  .prompt-header {
+    padding: max(9px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+    grid-template-columns: 42px minmax(180px, 320px) 42px;
+    justify-content: space-between;
+  }
+  .glass-button { width: 42px; height: 42px; border-radius: 13px; }
+  .reading-zone::before { height: 20vh; }
+  .reading-zone::after { height: 23vh; }
+  #scriptDisplay {
+    width: min(80vw, 920px);
+    padding-top: 43vh;
+    padding-bottom: 52vh;
+    line-height: 1.52;
+  }
+  .focus-line { top: 42.5%; left: max(13px, env(safe-area-inset-left)); right: max(13px, env(safe-area-inset-right)); }
+  .prompt-controls {
+    left: 50%; right: auto; width: 326px;
+    transform: translateX(-50%);
+    grid-template-columns: 96px 60px 96px;
+    gap: 12px;
+    padding: 10px 14px max(8px, env(safe-area-inset-bottom));
+  }
+  .play-button { width: 60px; height: 60px; box-shadow: 0 0 0 6px rgba(255,92,53,.08), 0 8px 24px rgba(0,0,0,.35); }
+  .play-button svg { width: 25px; }
+  .mini-control { height: 43px; }
+  .live-readout { display: none; }
+  .countdown { grid-auto-flow: column; gap: 30px; align-items: center; }
+  .countdown span { font-size: min(40vh, 160px); }
+  .countdown small { margin-top: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

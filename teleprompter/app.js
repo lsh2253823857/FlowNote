@@ -47,11 +47,12 @@ function toast(message) {
 }
 
 function renderSettings() {
-  const { speed, fontSize, mirror, countdown } = state.settings;
+  const { speed, fontSize, mirror, landscape, countdown } = state.settings;
   $('speedValue').textContent = `${(speed / 180).toFixed(1)}×`;
   $('speedWpm').textContent = speed;
   $('fontValue').textContent = fontSize;
   $('mirrorToggle').checked = mirror;
+  $('landscapeToggle').checked = landscape;
   $('countdownToggle').checked = countdown;
   $('liveSpeed').textContent = `${(speed / 180).toFixed(1)}×`;
   $('liveFont').textContent = `${fontSize}px`;
@@ -162,7 +163,24 @@ function beginCountdown() {
   tick();
 }
 
-function openPrompt() {
+async function applyPreferredOrientation() {
+  if (!state.settings.landscape) return;
+  let locked = false;
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    }
+    if (screen.orientation?.lock) {
+      await screen.orientation.lock('landscape');
+      locked = true;
+    }
+  } catch { /* Some browsers require device auto-rotate; the responsive layout still works. */ }
+  if (!locked && matchMedia('(orientation: portrait)').matches) {
+    toast('请打开自动旋转，并将手机横过来');
+  }
+}
+
+async function openPrompt() {
   const text = $('scriptInput').value.trim();
   if (!text) { toast('先写一点要说的内容'); $('scriptInput').focus(); return; }
   save();
@@ -173,6 +191,7 @@ function openPrompt() {
   renderSettings();
   state.offset = 0;
   $('playState').innerHTML = '<i></i> 准备';
+  await applyPreferredOrientation();
   requestAnimationFrame(() => { measureScroll(); beginCountdown(); });
 }
 
@@ -180,6 +199,7 @@ async function closePrompt() {
   clearTimeout(state.countdownTimer);
   $('countdown').hidden = true;
   setPlaying(false);
+  try { screen.orientation?.unlock?.(); } catch { /* not locked */ }
   if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
   $('promptScreen').hidden = true;
   $('editorScreen').hidden = false;
@@ -213,6 +233,7 @@ function bind() {
   document.querySelectorAll('[data-adjust]').forEach(button => button.addEventListener('click', () => adjust(button.dataset.adjust, Number(button.dataset.delta))));
   document.querySelectorAll('[data-live-adjust]').forEach(button => button.addEventListener('click', () => adjust(button.dataset.liveAdjust, Number(button.dataset.delta))));
   $('mirrorToggle').addEventListener('change', event => { state.settings.mirror = event.target.checked; renderSettings(); save(); });
+  $('landscapeToggle').addEventListener('change', event => { state.settings.landscape = event.target.checked; save(); });
   $('countdownToggle').addEventListener('change', event => { state.settings.countdown = event.target.checked; save(); });
   $('startButton').addEventListener('click', openPrompt);
   $('backButton').addEventListener('click', closePrompt);

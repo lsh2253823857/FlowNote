@@ -1,4 +1,4 @@
-const CACHE = 'shunci-v1';
+const CACHE = 'shunci-v2';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './core.mjs',
   './manifest.webmanifest', './icons/icon.svg'
@@ -20,4 +20,3 @@ self.addEventListener('fetch', event => {
     return response;
   }).catch(() => caches.match('./index.html'))));
 });
-
