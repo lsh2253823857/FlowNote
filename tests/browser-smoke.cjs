@@ -23,6 +23,14 @@ assert.deepEqual(waitFixture.steps.map(s=>s.id),[1,8,4],'inserted waits receive 
 assert.equal(waitFixture.steps[1].seconds,5);
 assert.equal(core.normalizeEvent({action:'wait',seconds:30,url:'https://example.test/'},false).seconds,30);
 assert.equal(core.normalizeEvent({action:'wait',seconds:0,url:'https://example.test/'},false),null);
+const rangeDrag=core.normalizeEvent({action:'drag',dragType:'range',url:'https://example.test/',target:{tag:'input',inputType:'range',label:'价格'},start:{x:.2,y:.5},end:{x:.8,y:.5}},false);
+assert.equal(rangeDrag.dragType,'range');assert.equal(rangeDrag.parameter,true);
+const canvasDrag=core.normalizeEvent({action:'drag',dragType:'canvas',url:'https://example.test/',target:{tag:'canvas'},start:{x:.1,y:.1},end:{x:.9,y:.9},path:[{x:.1,y:.1},{x:.5,y:.5},{x:.9,y:.9}]},false);
+assert.equal(canvasDrag.path.length,3);
+assert.equal(core.normalizeEvent({action:'drag',dragType:'canvas',url:'https://example.test/',target:{},start:{x:0,y:0},end:{x:1,y:1},path:Array(25).fill({x:.5,y:.5})},false),null);
+const scroll=core.normalizeEvent({action:'scroll',url:'https://example.test/',target:{selector:'#list'},scrollX:0,scrollY:500,xRatio:0,yRatio:.5,page:false},false);
+assert.equal(scroll.scrollY,500);assert.equal(scroll.yRatio,.5);
+assert.equal(core.normalizeEvent({action:'scroll',url:'https://example.test/',target:{},scrollX:0,scrollY:-1,xRatio:0,yRatio:0},false),null);
 const root = path.resolve(__dirname,'..');
 const output = path.resolve(process.env.WRR_TEST_OUTPUT || path.join(os.tmpdir(),'wrr-test-results'));
 fs.mkdirSync(output,{recursive:true});
@@ -34,15 +42,18 @@ assert.deepEqual(manifest.permissions,['activeTab','scripting','storage','webNav
 assert.deepEqual(manifest.host_permissions,['https://*/*','http://*/*']);
 assert.equal(manifest.optional_host_permissions,undefined);
 const html=`<!doctype html><meta charset="utf-8"><title>WRR isolated fixture</title>
-<style>body{font:16px sans-serif;padding:36px}label{display:block;margin:16px}input,select,button{padding:8px}#result{color:green}</style>
+<style>body{font:16px sans-serif;padding:36px;min-height:1500px}label{display:block;margin:16px}input,select,button{padding:8px}#result{color:green}#sortable{display:flex;gap:8px;padding:10px}#sortable li{list-style:none;padding:12px;background:#eee}#board{border:1px solid #333}#scroller{height:80px;overflow:auto;border:1px solid #999}.scroll-content{height:500px}</style>
 <h1>经营日报 · 本地测试</h1><form id="report"><label>日期<input id="date" name="report-date"></label>
 <label>密码<input id="password" type="password" name="password"></label>
 <label>验证码<input id="otp" name="otp" autocomplete="one-time-code"></label>
 <label>分类<select id="category"><option value="daily">日报</option><option value="monthly">月报</option></select></label>
+<label>价格<input id="price" type="range" min="0" max="100" value="20"></label>
 <label><input type="checkbox" id="include" name="include">包含退款</label>
 <button type="submit" id="download">生成报表</button></form>
+<ul id="sortable"><li id="item-a" draggable="true">商品 A</li><li id="item-b" draggable="true">商品 B</li></ul>
+<canvas id="board" width="240" height="120"></canvas><div id="scroller"><div class="scroll-content">可滚动内容</div></div>
 <button id="route" onclick="history.pushState({},'', '/route?token=URL-SECRET#private')">切换页面</button>
-<div id="result"></div><script>document.querySelector('form').onsubmit=e=>{e.preventDefault();document.getElementById('result').textContent='报表生成成功'};</script>`;
+<div id="result"></div><script>document.querySelector('form').onsubmit=e=>{e.preventDefault();document.getElementById('result').textContent='报表生成成功'};document.querySelector('#sortable').ondragover=e=>e.preventDefault();document.querySelector('#sortable').ondrop=e=>e.preventDefault();</script>`;
 const frameHtml=`<!doctype html><meta charset="utf-8"><label>标题<input id="frame-title"></label><label>密码<input type="password" id="frame-password"></label><button id="frame-save">保存草稿</button><div contenteditable="true" id="editor"></div>`;
 const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html;charset=utf-8');res.end(req.url.startsWith('/frame') ? frameHtml : html);});
 async function poll(fn, predicate, label, timeout=6000) {
@@ -86,8 +97,15 @@ async function poll(fn, predicate, label, timeout=6000) {
     await page.locator('#category').press('Tab');
     await page.locator('#include').check();
     await page.locator('#download').click();
+    const rangeBox=await page.locator('#price').boundingBox();
+    await page.mouse.move(rangeBox.x+rangeBox.width*.2,rangeBox.y+rangeBox.height/2);await page.mouse.down();await page.mouse.move(rangeBox.x+rangeBox.width*.8,rangeBox.y+rangeBox.height/2,{steps:5});await page.mouse.up();
+    await page.locator('#item-a').dragTo(page.locator('#item-b'));
+    const canvasBox=await page.locator('#board').boundingBox();
+    await page.mouse.move(canvasBox.x+20,canvasBox.y+20);await page.mouse.down();await page.mouse.move(canvasBox.x+100,canvasBox.y+50,{steps:6});await page.mouse.move(canvasBox.x+200,canvasBox.y+90,{steps:6});await page.mouse.up();
+    await page.locator('#scroller').evaluate(element=>{element.scrollTop=300;});
+    let state=await poll(get,s=>s.draft.steps.some(x=>x.action==='drag' && x.dragType==='range') && s.draft.steps.some(x=>x.action==='drag' && x.dragType==='sort') && s.draft.steps.some(x=>x.action==='drag' && x.dragType==='canvas') && s.draft.steps.some(x=>x.action==='scroll' && x.target.selector==='#scroller'),'gesture capture');
     await page.locator('#route').click();
-    let state=await poll(get,s=>s.draft.steps.some(x=>x.action==='navigate' && x.url.includes('/route')),'SPA navigation');
+    state=await poll(get,s=>s.draft.steps.some(x=>x.action==='navigate' && x.url.includes('/route')),'SPA navigation');
     let encoded=JSON.stringify(state.draft);
     for(const secret of ['PRIVATE-EXAMPLE','PASSWORD-SECRET','123456','URL-SECRET','#private'])assert(!encoded.includes(secret),secret+' leaked');
     assert(state.draft.steps.some(s=>s.action==='fill' && s.parameter===true));
@@ -95,6 +113,10 @@ async function poll(fn, predicate, label, timeout=6000) {
     assert(state.draft.steps.some(s=>s.action==='select'),'trusted native select should be recorded');
     assert(state.draft.steps.some(s=>s.action==='check' && s.checked===true));
     assert(state.draft.steps.some(s=>s.action==='submit'));
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='range' && s.parameter===true),'range drag parameterized');
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='sort' && s.dropTarget?.name?.includes('商品 B')),'sortable drag recorded');
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='canvas' && s.path.length>=2 && s.path.length<=24),'canvas path bounded');
+    assert(state.draft.steps.some(s=>s.action==='scroll' && s.target.selector==='#scroller' && s.scrollY>0),'container scroll recorded');
     assert(state.draft.steps.filter(s=>s.action==='manual').length>=2);
     // A dynamically created same-origin drawer and nested child must both record.
     await page.evaluate(()=>{const f=document.createElement('iframe');f.id='drawer';f.src='/frame';document.body.appendChild(f);});

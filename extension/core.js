@@ -13,15 +13,22 @@
     } catch (_) { return null; }
   }
   function short(value, max = 180) { return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max); }
+  function normalizedTarget(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {}, result = {};
+    for (const key of ['tag','role','name','label','placeholder','inputType','selector','testId','fieldName']) {
+      if (typeof source[key] === 'string') result[key] = short(source[key], key === 'selector' ? 500 : 180);
+    }
+    return result;
+  }
+  function normalizedPoint(raw) {
+    if (!raw || typeof raw !== 'object' || !Number.isFinite(raw.x) || !Number.isFinite(raw.y) || raw.x < 0 || raw.x > 1 || raw.y < 0 || raw.y > 1) return null;
+    return {x:Math.round(raw.x * 10000) / 10000,y:Math.round(raw.y * 10000) / 10000};
+  }
   function normalizeEvent(raw, captureValues) {
-    if (!raw || !['navigate','click','fill','select','check','submit','keypress','manual','note','wait'].includes(raw.action)) return null;
+    if (!raw || !['navigate','click','fill','select','check','submit','keypress','manual','note','wait','drag','scroll'].includes(raw.action)) return null;
     const url = cleanUrl(raw.url);
     if (!url) return null;
-    const t = raw.target || {};
-    const target = {};
-    for (const key of ['tag','role','name','label','placeholder','inputType','selector','testId','fieldName']) {
-      if (typeof t[key] === 'string') target[key] = short(t[key], key === 'selector' ? 500 : 180);
-    }
+    const target = normalizedTarget(raw.target);
     const secret = target.inputType === 'password' || sensitive.test([target.name,target.label,target.fieldName,target.placeholder,raw.autocomplete].join(' '));
     const event = { action: raw.action, url, target };
     if (raw.action === 'manual') event.reason = short(raw.reason, 300);
@@ -43,6 +50,34 @@
       if (!Number.isInteger(raw.seconds) || raw.seconds < 1 || raw.seconds > 3600) return null;
       event.seconds = raw.seconds;
     }
+    if (raw.action === 'drag') {
+      if (!['range','sort','element','canvas'].includes(raw.dragType)) return null;
+      if (raw.dragType === 'range' && secret) { event.action='manual';event.reason='Sensitive field: complete manually; value was not recorded.';return event; }
+      const start=normalizedPoint(raw.start),end=normalizedPoint(raw.end);
+      if (!start || !end) return null;
+      event.dragType=raw.dragType;event.start=start;event.end=end;
+      if (['sort','element'].includes(raw.dragType) && (!raw.dropTarget || typeof raw.dropTarget!=='object')) return null;
+      if (raw.dropTarget) event.dropTarget=normalizedTarget(raw.dropTarget);
+      if (raw.position) {
+        if (!['before','after','inside'].includes(raw.position)) return null;
+        event.position=raw.position;
+      }
+      if (['sort','element'].includes(raw.dragType) && !event.position) return null;
+      if (raw.dragType === 'canvas') {
+        if (!Array.isArray(raw.path) || raw.path.length < 2 || raw.path.length > 24) return null;
+        event.path=[];
+        for (const item of raw.path) {const point=normalizedPoint(item);if(!point)return null;event.path.push(point);}
+      }
+      if (raw.dragType === 'range') {
+        if (captureValues && typeof raw.value === 'string') event.value=raw.value.slice(0,4000);
+        else event.parameter=true;
+      }
+    }
+    if (raw.action === 'scroll') {
+      if (![raw.scrollX,raw.scrollY,raw.xRatio,raw.yRatio].every(Number.isFinite) || raw.scrollX < 0 || raw.scrollY < 0 || raw.xRatio < 0 || raw.xRatio > 1 || raw.yRatio < 0 || raw.yRatio > 1) return null;
+      event.scrollX=Math.round(raw.scrollX);event.scrollY=Math.round(raw.scrollY);
+      event.xRatio=Math.round(raw.xRatio*10000)/10000;event.yRatio=Math.round(raw.yRatio*10000)/10000;event.page=raw.page===true;
+    }
     return event;
   }
   function append(steps, event) {
@@ -51,7 +86,7 @@
     const oldTarget = previous?.target || {}, newTarget = event.target || {};
     const sameFrame = previous && (previous.frame?.id || 0) === (event.frame?.id || 0) && (previous.frame?.documentId || '') === (event.frame?.documentId || '');
     const sameTarget = sameFrame && previous.url === event.url && [...new Set([...Object.keys(oldTarget), ...Object.keys(newTarget)])].every(key => oldTarget[key] === newTarget[key]);
-    if (sameTarget && ['fill','select','check'].includes(event.action) && previous.action === event.action) {
+    if (sameTarget && ['fill','select','check','scroll'].includes(event.action) && previous.action === event.action) {
       steps[steps.length - 1] = { ...event, id: previous.id }; return;
     }
     if (sameFrame && event.action === 'navigate' && previous.action === 'navigate' && previous.url === event.url) return;

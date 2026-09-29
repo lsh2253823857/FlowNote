@@ -13,12 +13,14 @@ function setSettings(open) {
   $('settingsToggle').title = open ? '返回录制' : '网站黑名单设置';
   $('main').scrollTop = open ? 0 : workflowScroll;
 }
-const labels = {navigate:'打开页面',click:'点击',fill:'填写',select:'选择',check:'勾选',submit:'提交表单',keypress:'按键',manual:'手动步骤',note:'补充说明',wait:'等待'};
+const labels = {navigate:'打开页面',click:'点击',fill:'填写',select:'选择',check:'勾选',submit:'提交表单',keypress:'按键',manual:'手动步骤',note:'补充说明',wait:'等待',drag:'拖动',scroll:'滚动'};
 const reasons = {
   'Recording started':'开始录制',
   'Recording continued here; actions during pause were not captured':'从当前页继续；暂停期间的操作未记录',
   'Sensitive field: complete manually; value was not recorded.':'敏感字段，未记录输入内容，执行时手动完成',
   'File selection: supply a new local file at replay time.':'文件选择，执行时提供本地文件',
+  'File drop: supply a new local file at replay time; file paths were not recorded.':'文件拖放，执行时重新选择本地文件；路径未记录',
+  'Shadow DOM drag: inspect the live browser and complete manually.':'Shadow DOM 拖动，执行时检查实时页面并手动完成',
   'Multi-select: select the desired options at replay time.':'多选控件，执行时选择所需项目',
   'URL changed; query/fragment values are not retained':'页面地址发生变化，网址参数值未保存'
 };
@@ -28,7 +30,17 @@ function showNotice(message, success=false) {
 }
 function displayUrl(raw) { try { const u=new URL(raw);return u.hostname+(u.pathname==='/'?'':u.pathname); } catch { return raw || ''; } }
 function stepDescription(step) {
-  return step.note || reasons[step.reason] || step.reason || (step.action==='wait' ? `等待 ${step.seconds} 秒` : Object.hasOwn(step,'value') ? `填写示例：${step.value}` : step.parameter ? '执行时提供这个字段的值' : step.key ? `按下 ${step.key}` : step.action==='check' ? (step.checked ? '设为已选中' : '取消选中') : displayUrl(step.url));
+  if(step.note || reasons[step.reason] || step.reason)return step.note || reasons[step.reason] || step.reason;
+  if(step.action==='wait')return `等待 ${step.seconds} 秒`;
+  if(step.action==='drag'){
+    const destination=step.dropTarget?.name || step.dropTarget?.label || step.dropTarget?.selector || '目标位置';
+    if(step.dragType==='range')return Object.hasOwn(step,'value') ? `滑块示例值：${step.value}` : '执行时提供滑块目标值';
+    if(step.dragType==='canvas')return `画布轨迹 · ${step.path?.length || 0} 个点`;
+    if(step.dragType==='sort')return `排序到 ${destination}${step.position==='before'?'之前':step.position==='after'?'之后':''}`;
+    return `拖动到 ${destination}`;
+  }
+  if(step.action==='scroll')return `${step.page?'页面':'区域'}滚动到横向 ${Math.round((step.xRatio || 0)*100)}% · 纵向 ${Math.round((step.yRatio || 0)*100)}%`;
+  return Object.hasOwn(step,'value') ? `填写示例：${step.value}` : step.parameter ? '执行时提供这个字段的值' : step.key ? `按下 ${step.key}` : step.action==='check' ? (step.checked ? '设为已选中' : '取消选中') : displayUrl(step.url);
 }
 async function request(type, extra = {}) {
   const result = await chrome.runtime.sendMessage({type,...extra});
