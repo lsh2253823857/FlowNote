@@ -52,6 +52,11 @@
     if (source.draggable || source.matches('[role="option"],[role="listitem"],li') || destination?.matches('[draggable="true"],[role="option"],[role="listitem"],li')) return 'sort';
     return 'element';
   }
+  function rangeValue(element) {
+    if ('value' in element) return String(element.value).slice(0,4000);
+    const value=attr(element,'aria-valuenow');
+    return value ? value.slice(0,4000) : undefined;
+  }
   function simplifiedPath(points, canvas, start, end) {
     const source=points.length>=2 ? points : [start,end];
     const count=Math.min(24,source.length),result=[];
@@ -63,11 +68,14 @@
     if(result.length<2){result.length=0;result.push(relativePoint(canvas,start.x,start.y),relativePoint(canvas,end.x,end.y));}
     return result;
   }
-  function sendDrag(source, destination, start, end, path = []) {
+  function sendDrag(source, destination, start, end, path = [], startValue) {
     const type=dragType(source,destination),event={action:'drag',dragType:type,target:target(source),start:relativePoint(source,start.x,start.y),end:relativePoint(type==='range'||type==='canvas'?source:destination,end.x,end.y)};
     if(type==='element' && String(window.getSelection?.() || '').trim())return;
     if(type==='range'){
-      if(captureValues && 'value' in source)event.value=String(source.value).slice(0,4000);
+      if(captureValues){
+        if(typeof startValue==='string')event.startValue=startValue;
+        const value=rangeValue(source);if(typeof value==='string')event.value=value;
+      }
       lastRangeDragAt=Date.now();
     } else if(type!=='canvas') {
       event.dropTarget=target(destination);
@@ -81,7 +89,7 @@
     if(!recording || !event.isTrusted || event.button!==0)return;
     const raw=event.composedPath()[0],source=gestureElement(raw);
     if(!source || source.closest('[data-wrr-indicator]'))return;
-    pointerGesture={pointerId:event.pointerId,source,start:{x:event.clientX,y:event.clientY},last:{x:event.clientX,y:event.clientY},path:[{x:event.clientX,y:event.clientY}]};
+    pointerGesture={pointerId:event.pointerId,source,start:{x:event.clientX,y:event.clientY},last:{x:event.clientX,y:event.clientY},path:[{x:event.clientX,y:event.clientY}],startValue:captureValues && dragType(source,source)==='range' ? rangeValue(source) : undefined};
   }
   function onPointerMove(event) {
     if(!pointerGesture || event.pointerId!==pointerGesture.pointerId)return;
@@ -96,7 +104,7 @@
     if(Math.hypot(end.x-gesture.start.x,end.y-gesture.start.y)<8)return;
     if(gesture.source.getRootNode()!==document){send({action:'manual',target:{},reason:'Shadow DOM drag: inspect the live browser and complete manually.'});return;}
     const destination=dropElement(document.elementFromPoint(end.x,end.y) || event.composedPath()[0]);
-    sendDrag(gesture.source,destination,gesture.start,end,gesture.path.concat(end));
+    sendDrag(gesture.source,destination,gesture.start,end,gesture.path.concat(end),gesture.startValue);
   }
   function onDragStart(event) {
     if(!recording || !event.isTrusted)return;

@@ -29,15 +29,23 @@ function showNotice(message, success=false) {
   $('notice').textContent=message || ''; $('notice').hidden=!message; $('notice').classList.toggle('success',success);
 }
 function displayUrl(raw) { try { const u=new URL(raw);return u.hostname+(u.pathname==='/'?'':u.pathname); } catch { return raw || ''; } }
+function dragPoints(step) {
+  const point=value=>value && Number.isFinite(value.x) && Number.isFinite(value.y) ? `(${Math.round(value.x*100)}%, ${Math.round(value.y*100)}%)` : '(未知)';
+  return `起点 ${point(step.start)} → 终点 ${point(step.end)}`;
+}
 function stepDescription(step) {
   if(step.note || reasons[step.reason] || step.reason)return step.note || reasons[step.reason] || step.reason;
   if(step.action==='wait')return `等待 ${step.seconds} 秒`;
   if(step.action==='drag'){
     const destination=step.dropTarget?.name || step.dropTarget?.label || step.dropTarget?.selector || '目标位置';
-    if(step.dragType==='range')return Object.hasOwn(step,'value') ? `滑块示例值：${step.value}` : '执行时提供滑块目标值';
-    if(step.dragType==='canvas')return `画布轨迹 · ${step.path?.length || 0} 个点`;
-    if(step.dragType==='sort')return `排序到 ${destination}${step.position==='before'?'之前':step.position==='after'?'之后':''}`;
-    return `拖动到 ${destination}`;
+    const points=dragPoints(step);
+    if(step.dragType==='range'){
+      const values=Object.hasOwn(step,'value') ? `滑块值：${Object.hasOwn(step,'startValue') ? step.startValue : '未知'} → ${step.value}` : '执行时提供滑块目标值';
+      return `${values} · ${points}`;
+    }
+    if(step.dragType==='canvas')return `画布轨迹 · ${step.path?.length || 0} 个点 · ${points}`;
+    if(step.dragType==='sort')return `排序到 ${destination}${step.position==='before'?'之前':step.position==='after'?'之后':''} · ${points}`;
+    return `拖动到 ${destination} · ${points}`;
   }
   if(step.action==='scroll')return `${step.page?'页面':'区域'}滚动到横向 ${Math.round((step.xRatio || 0)*100)}% · 纵向 ${Math.round((step.yRatio || 0)*100)}%`;
   return Object.hasOwn(step,'value') ? `填写示例：${step.value}` : step.parameter ? '执行时提供这个字段的值' : step.key ? `按下 ${step.key}` : step.action==='check' ? (step.checked ? '设为已选中' : '取消选中') : displayUrl(step.url);

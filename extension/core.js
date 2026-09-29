@@ -69,6 +69,7 @@
         for (const item of raw.path) {const point=normalizedPoint(item);if(!point)return null;event.path.push(point);}
       }
       if (raw.dragType === 'range') {
+        if (captureValues && typeof raw.startValue === 'string') event.startValue=raw.startValue.slice(0,4000);
         if (captureValues && typeof raw.value === 'string') event.value=raw.value.slice(0,4000);
         else event.parameter=true;
       }

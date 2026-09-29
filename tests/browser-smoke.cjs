@@ -25,6 +25,8 @@ assert.equal(core.normalizeEvent({action:'wait',seconds:30,url:'https://example.
 assert.equal(core.normalizeEvent({action:'wait',seconds:0,url:'https://example.test/'},false),null);
 const rangeDrag=core.normalizeEvent({action:'drag',dragType:'range',url:'https://example.test/',target:{tag:'input',inputType:'range',label:'价格'},start:{x:.2,y:.5},end:{x:.8,y:.5}},false);
 assert.equal(rangeDrag.dragType,'range');assert.equal(rangeDrag.parameter,true);
+const capturedRangeDrag=core.normalizeEvent({action:'drag',dragType:'range',url:'https://example.test/',target:{tag:'input',inputType:'range',label:'价格'},start:{x:.2,y:.5},end:{x:.8,y:.5},startValue:'20',value:'80'},true);
+assert.equal(capturedRangeDrag.startValue,'20');assert.equal(capturedRangeDrag.value,'80');
 const canvasDrag=core.normalizeEvent({action:'drag',dragType:'canvas',url:'https://example.test/',target:{tag:'canvas'},start:{x:.1,y:.1},end:{x:.9,y:.9},path:[{x:.1,y:.1},{x:.5,y:.5},{x:.9,y:.9}]},false);
 assert.equal(canvasDrag.path.length,3);
 assert.equal(core.normalizeEvent({action:'drag',dragType:'canvas',url:'https://example.test/',target:{},start:{x:0,y:0},end:{x:1,y:1},path:Array(25).fill({x:.5,y:.5})},false),null);
@@ -113,7 +115,7 @@ async function poll(fn, predicate, label, timeout=6000) {
     assert(state.draft.steps.some(s=>s.action==='select'),'trusted native select should be recorded');
     assert(state.draft.steps.some(s=>s.action==='check' && s.checked===true));
     assert(state.draft.steps.some(s=>s.action==='submit'));
-    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='range' && s.parameter===true),'range drag parameterized');
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='range' && s.parameter===true && s.start.x<.4 && s.end.x>.6),'range drag keeps start and end positions');
     assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='sort' && s.dropTarget?.name?.includes('商品 B')),'sortable drag recorded');
     assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='canvas' && s.path.length>=2 && s.path.length<=24),'canvas path bounded');
     assert(state.draft.steps.some(s=>s.action==='scroll' && s.target.selector==='#scroller' && s.scrollY>0),'container scroll recorded');

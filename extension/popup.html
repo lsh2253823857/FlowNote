@@ -26,7 +26,7 @@
       <div class="section-intro"><span class="eyebrow">新的开始</span><h2>把操作，变成工作流。</h2><p>演示一次，记录每一步。交给 Codex 整理复用。</p></div>
       <label class="field" for="title">流程名称<input id="title" maxlength="100" autocomplete="off" placeholder="例如：下载每日经营报表"></label>
       <label class="field" for="goal">完成目标 <span class="optional">选填</span><textarea id="goal" maxlength="800" placeholder="例如：选择指定日期，下载一份 Excel 报表"></textarea></label>
-      <label class="capture-option" for="capture"><span><strong>保留填写示例</strong><small>开启后，记录普通表单中的输入值</small></span><input id="capture" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="capture-option" for="capture"><span><strong>保留填写示例</strong><small>开启后，记录普通表单值及滑块起止值</small></span><input id="capture" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
       <div class="privacy"><span class="privacy-dot" aria-hidden="true"></span><p>录制保存在本机。密码、验证码等常见敏感字段会跳过。</p></div>
     </section>
     <section id="review" hidden>
@@ -52,7 +52,7 @@
   <footer class="action-bar">
     <div class="action-buttons"><button id="start" class="primary"><span class="record-dot" aria-hidden="true"></span>开始录制当前页</button><button id="stop" class="stop" hidden><span class="stop-square" aria-hidden="true"></span>停止录制</button><button id="resume" class="secondary" hidden>继续录制当前页</button><button id="export" class="primary" hidden>导出录制 JSON <span aria-hidden="true">↗</span></button></div>
     <button id="clear" class="delete-recording" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>清除本次录制</button>
-    <div class="footer-meta"><span id="footerHint">只录制你选定的标签页</span><span id="version">v0.7.0</span></div>
+    <div class="footer-meta"><span id="footerHint">只录制你选定的标签页</span><span id="version">v0.7.1</span></div>
   </footer>
   <dialog id="branchDialog" aria-labelledby="branchDialogTitle">
     <form id="branchForm">

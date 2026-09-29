@@ -58,7 +58,7 @@ class ConversionTests(unittest.TestCase):
     def test_drag_and_scroll_steps_are_validated_and_preserved(self):
         result=converter.convert(self.data([
             {'action':'drag','dragType':'range','url':'https://example.test/editor','target':{'tag':'input','inputType':'range','label':'价格'},
-             'start':{'x':0.2,'y':0.5},'end':{'x':0.8,'y':0.5},'parameter':True},
+             'start':{'x':0.2,'y':0.5},'end':{'x':0.8,'y':0.5},'startValue':'20','value':'80'},
             {'action':'drag','dragType':'sort','url':'https://example.test/editor','target':{'name':'商品 A'},
              'dropTarget':{'name':'商品 B'},'start':{'x':0.5,'y':0.5},'end':{'x':0.5,'y':0.9},'position':'after'},
             {'action':'drag','dragType':'canvas','url':'https://example.test/editor','target':{'tag':'canvas','selector':'#board'},
@@ -69,6 +69,8 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(result['steps'][0]['dragType'],'range')
         self.assertEqual(result['steps'][0]['parameter'],'drag_1')
         self.assertEqual(result['parameters']['drag_1']['label'],'价格')
+        self.assertEqual(result['parameters']['drag_1']['recordedStartExample'],'20')
+        self.assertEqual(result['parameters']['drag_1']['recordedExample'],'80')
         self.assertEqual(result['steps'][1]['dropTarget']['name'],'商品 B')
         self.assertEqual(result['steps'][1]['position'],'after')
         self.assertEqual(len(result['steps'][2]['path']),3)

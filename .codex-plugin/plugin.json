@@ -1,6 +1,6 @@
 {
   "name": "windows-record-replay",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Record Chrome or Edge workflows on Windows, including drags, scrolling, waits and branches, and turn them into reusable Codex skills.",
   "author": {
     "name": "Local developer"

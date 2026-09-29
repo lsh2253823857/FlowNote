@@ -168,6 +168,7 @@ def convert(data, name):
                 key=f'drag_{index}'
                 result['parameters'][key]={'label':target.get('label') or target.get('name') or target.get('fieldName') or f'Range value at step {index}','required':route_id=='main'}
                 if route_id!='main': result['parameters'][key]['requiredWhenBranch']=route_id
+                if isinstance(raw.get('startValue'),str): result['parameters'][key]['recordedStartExample']=text(raw['startValue'],4000)
                 if isinstance(raw.get('value'),str): result['parameters'][key]['recordedExample']=text(raw['value'],4000)
                 step['parameter']=key
         elif action=='scroll':
