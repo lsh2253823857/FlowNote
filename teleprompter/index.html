@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b0c0d">
+  <meta name="description" content="离线、轻量、专为安卓手机设计的提词器">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <title>顺词 · 手机提词器</title>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+  <main class="app-shell" id="app">
+    <section class="editor-screen" id="editorScreen" aria-labelledby="appTitle">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="brand-copy">
+          <p class="eyebrow">MOBILE TELEPROMPTER</p>
+          <h1 id="appTitle">顺词</h1>
+        </div>
+        <button class="icon-button" id="installButton" hidden aria-label="安装到桌面" title="安装到桌面">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+        </button>
+      </header>
+
+      <section class="intro-card">
+        <div>
+          <p class="section-kicker"><span class="live-dot"></span> 随时开拍</p>
+          <h2>把话说顺，<br><em>把镜头留给你。</em></h2>
+        </div>
+        <p class="intro-note">稿件只保存在这台手机里，断网也能用。</p>
+      </section>
+
+      <section class="script-card" aria-labelledby="scriptHeading">
+        <div class="card-heading">
+          <div>
+            <p class="section-kicker">01 / 稿件</p>
+            <h2 id="scriptHeading">今天要说什么？</h2>
+          </div>
+          <label class="file-button" for="fileInput">导入 TXT</label>
+          <input id="fileInput" type="file" accept=".txt,text/plain" hidden>
+        </div>
+        <input class="title-input" id="scriptTitle" type="text" maxlength="60" placeholder="给这段稿子起个名字" aria-label="稿件标题">
+        <div class="textarea-wrap">
+          <textarea id="scriptInput" maxlength="30000" placeholder="粘贴或输入你的口播稿……" aria-label="口播稿正文"></textarea>
+          <button id="clearButton" class="clear-button" type="button">清空</button>
+        </div>
+        <div class="script-meta" aria-live="polite">
+          <span><strong id="charCount">0</strong> 字</span>
+          <span class="meta-divider"></span>
+          <span>约 <strong id="durationEstimate">0:00</strong></span>
+          <button id="sampleButton" type="button">填入示例</button>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsHeading">
+        <div class="card-heading compact">
+          <div>
+            <p class="section-kicker">02 / 节奏</p>
+            <h2 id="settingsHeading">调到舒服为止</h2>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><span class="setting-label">滚动速度</span><small>每分钟约 <b id="speedWpm">180</b> 字</small></div>
+          <div class="stepper" role="group" aria-label="滚动速度">
+            <button type="button" data-adjust="speed" data-delta="-10" aria-label="减慢">−</button>
+            <output id="speedValue">1.0×</output>
+            <button type="button" data-adjust="speed" data-delta="10" aria-label="加快">＋</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><span class="setting-label">文字大小</span><small>远一点也看得清</small></div>
+          <div class="stepper" role="group" aria-label="文字大小">
+            <button type="button" data-adjust="fontSize" data-delta="-2" aria-label="缩小">A−</button>
+            <output id="fontValue">42</output>
+            <button type="button" data-adjust="fontSize" data-delta="2" aria-label="放大">A＋</button>
+          </div>
+        </div>
+        <label class="toggle-row">
+          <span><b>镜像模式</b><small>搭配反射式提词器使用</small></span>
+          <input id="mirrorToggle" type="checkbox"><i aria-hidden="true"></i>
+        </label>
+        <label class="toggle-row">
+          <span><b>开场倒计时</b><small>开始前留 3 秒准备</small></span>
+          <input id="countdownToggle" type="checkbox" checked><i aria-hidden="true"></i>
+        </label>
+      </section>
+
+      <button class="primary-button" id="startButton" type="button">
+        <span>开始提词</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+      <p class="home-hint">进入后轻点屏幕即可暂停 · 自动保持屏幕常亮</p>
+    </section>
+
+    <section class="prompt-screen" id="promptScreen" hidden aria-label="提词播放">
+      <header class="prompt-header">
+        <button class="glass-button" id="backButton" type="button" aria-label="返回编辑">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="prompt-status">
+          <span id="playState"><i></i> 准备</span>
+          <div class="progress-track"><i id="progressBar"></i></div>
+        </div>
+        <button class="glass-button" id="fullscreenButton" type="button" aria-label="全屏">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></svg>
+        </button>
+      </header>
+
+      <div class="reading-zone" id="readingZone" tabindex="0" role="button" aria-label="点击暂停或继续">
+        <div class="focus-line" aria-hidden="true"><span></span></div>
+        <article id="scriptDisplay"></article>
+        <div class="finish-card" id="finishCard" hidden>
+          <span>TAKE COMPLETE</span>
+          <h2>说完了，很顺。</h2>
+          <button id="replayButton" type="button">再来一遍</button>
+        </div>
+      </div>
+
+      <div class="countdown" id="countdown" hidden aria-live="assertive"><span>3</span><small>准备开口</small></div>
+
+      <footer class="prompt-controls">
+        <button class="mini-control" type="button" data-live-adjust="speed" data-delta="-10"><span>慢一点</span><b>−</b></button>
+        <button class="play-button" id="playButton" type="button" aria-label="播放或暂停">
+          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 8 6-8 6Z"/></svg>
+          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12m8-12v12"/></svg>
+        </button>
+        <button class="mini-control" type="button" data-live-adjust="speed" data-delta="10"><span>快一点</span><b>＋</b></button>
+        <div class="live-readout"><span id="liveSpeed">1.0×</span><i></i><span id="liveFont">42px</span></div>
+      </footer>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -14,3 +14,4 @@ Thumbs.db
 # Editor / OS
 .vscode/
 .idea/
+teleprompter/tests/*.png

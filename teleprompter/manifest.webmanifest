@@ -1,0 +1,17 @@
+{
+  "name": "顺词 · 手机提词器",
+  "short_name": "顺词",
+  "description": "离线、轻量、专为安卓手机设计的提词器",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c0d",
+  "theme_color": "#0b0c0d",
+  "categories": ["productivity", "video"],
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
+
