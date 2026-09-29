@@ -33,10 +33,10 @@
     return { tag, role: attr(element,'role'), name: WRR.short(name), label: WRR.short(label), placeholder: WRR.short(attr(element,'placeholder')), inputType: attr(element,'type'), selector: selector(element), testId: WRR.short(attr(element,'data-testid')), fieldName: WRR.short(attr(element,'name')) };
   }
   function clamp(value) { return Math.max(0,Math.min(1,value)); }
-  function relativePoint(element, x, y) {
+  function relativePoint(element, x, y, relativeTo) {
     const rect=element.getBoundingClientRect();
-    if (!rect.width || !rect.height) return {x:.5,y:.5};
-    return {x:Math.round(clamp((x-rect.left)/rect.width)*10000)/10000,y:Math.round(clamp((y-rect.top)/rect.height)*10000)/10000};
+    if (!rect.width || !rect.height) return {x:.5,y:.5,relativeTo};
+    return {x:Math.round(clamp((x-rect.left)/rect.width)*10000)/10000,y:Math.round(clamp((y-rect.top)/rect.height)*10000)/10000,relativeTo};
   }
   function gestureElement(element) {
     if (!(element instanceof Element)) return null;
@@ -62,19 +62,20 @@
     const count=Math.min(24,source.length),result=[];
     for(let i=0;i<count;i++){
       const index=count===1 ? 0 : Math.round(i*(source.length-1)/(count-1));
-      const point=relativePoint(canvas,source[index].x,source[index].y),previous=result.at(-1);
+      const point=relativePoint(canvas,source[index].x,source[index].y,'source'),previous=result.at(-1);
       if(!previous || previous.x!==point.x || previous.y!==point.y)result.push(point);
     }
-    if(result.length<2){result.length=0;result.push(relativePoint(canvas,start.x,start.y),relativePoint(canvas,end.x,end.y));}
+    if(result.length<2){result.length=0;result.push(relativePoint(canvas,start.x,start.y,'source'),relativePoint(canvas,end.x,end.y,'source'));}
     return result;
   }
   function sendDrag(source, destination, start, end, path = [], startValue) {
-    const type=dragType(source,destination),event={action:'drag',dragType:type,target:target(source),start:relativePoint(source,start.x,start.y),end:relativePoint(type==='range'||type==='canvas'?source:destination,end.x,end.y)};
+    const type=dragType(source,destination),endReference=type==='range'||type==='canvas'?'source':'dropTarget';
+    const event={action:'drag',dragType:type,target:target(source),coordinateSystem:{unit:'ratio',origin:'top-left'},start:relativePoint(source,start.x,start.y,'source'),end:relativePoint(endReference==='source'?source:destination,end.x,end.y,endReference),replayStrategy:{range:'set-value-first',sort:'semantic-drop-first',element:'semantic-drop-first',canvas:'path-first'}[type]};
     if(type==='element' && String(window.getSelection?.() || '').trim())return;
     if(type==='range'){
       if(captureValues){
         if(typeof startValue==='string')event.startValue=startValue;
-        const value=rangeValue(source);if(typeof value==='string')event.value=value;
+        const value=rangeValue(source);if(typeof value==='string')event.targetValue=value;
       }
       lastRangeDragAt=Date.now();
     } else if(type!=='canvas') {

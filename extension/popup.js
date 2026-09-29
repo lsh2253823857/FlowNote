@@ -40,7 +40,8 @@ function stepDescription(step) {
     const destination=step.dropTarget?.name || step.dropTarget?.label || step.dropTarget?.selector || '目标位置';
     const points=dragPoints(step);
     if(step.dragType==='range'){
-      const values=Object.hasOwn(step,'value') ? `滑块值：${Object.hasOwn(step,'startValue') ? step.startValue : '未知'} → ${step.value}` : '执行时提供滑块目标值';
+      const hasTargetValue=Object.hasOwn(step,'targetValue') || Object.hasOwn(step,'value'),targetValue=step.targetValue ?? step.value;
+      const values=hasTargetValue ? `滑块值：${Object.hasOwn(step,'startValue') ? step.startValue : '未知'} → ${targetValue}` : '执行时提供滑块目标值';
       return `${values} · ${points}`;
     }
     if(step.dragType==='canvas')return `画布轨迹 · ${step.path?.length || 0} 个点 · ${points}`;

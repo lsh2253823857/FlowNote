@@ -25,8 +25,8 @@ assert.equal(core.normalizeEvent({action:'wait',seconds:30,url:'https://example.
 assert.equal(core.normalizeEvent({action:'wait',seconds:0,url:'https://example.test/'},false),null);
 const rangeDrag=core.normalizeEvent({action:'drag',dragType:'range',url:'https://example.test/',target:{tag:'input',inputType:'range',label:'价格'},start:{x:.2,y:.5},end:{x:.8,y:.5}},false);
 assert.equal(rangeDrag.dragType,'range');assert.equal(rangeDrag.parameter,true);
-const capturedRangeDrag=core.normalizeEvent({action:'drag',dragType:'range',url:'https://example.test/',target:{tag:'input',inputType:'range',label:'价格'},start:{x:.2,y:.5},end:{x:.8,y:.5},startValue:'20',value:'80'},true);
-assert.equal(capturedRangeDrag.startValue,'20');assert.equal(capturedRangeDrag.value,'80');
+const capturedRangeDrag=core.normalizeEvent({action:'drag',dragType:'range',url:'https://example.test/',target:{tag:'input',inputType:'range',label:'价格'},coordinateSystem:{unit:'ratio',origin:'top-left'},start:{x:.2,y:.5,relativeTo:'source'},end:{x:.8,y:.5,relativeTo:'source'},startValue:'20',targetValue:'80',replayStrategy:'set-value-first'},true);
+assert.equal(capturedRangeDrag.startValue,'20');assert.equal(capturedRangeDrag.targetValue,'80');
 const canvasDrag=core.normalizeEvent({action:'drag',dragType:'canvas',url:'https://example.test/',target:{tag:'canvas'},start:{x:.1,y:.1},end:{x:.9,y:.9},path:[{x:.1,y:.1},{x:.5,y:.5},{x:.9,y:.9}]},false);
 assert.equal(canvasDrag.path.length,3);
 assert.equal(core.normalizeEvent({action:'drag',dragType:'canvas',url:'https://example.test/',target:{},start:{x:0,y:0},end:{x:1,y:1},path:Array(25).fill({x:.5,y:.5})},false),null);
@@ -115,9 +115,10 @@ async function poll(fn, predicate, label, timeout=6000) {
     assert(state.draft.steps.some(s=>s.action==='select'),'trusted native select should be recorded');
     assert(state.draft.steps.some(s=>s.action==='check' && s.checked===true));
     assert(state.draft.steps.some(s=>s.action==='submit'));
-    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='range' && s.parameter===true && s.start.x<.4 && s.end.x>.6),'range drag keeps start and end positions');
-    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='sort' && s.dropTarget?.name?.includes('商品 B')),'sortable drag recorded');
-    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='canvas' && s.path.length>=2 && s.path.length<=24),'canvas path bounded');
+    assert.equal(state.draft.schemaVersion,3,'new recordings use self-describing schema v3');
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='range' && s.parameter===true && s.coordinateSystem?.unit==='ratio' && s.start.relativeTo==='source' && s.end.relativeTo==='source' && s.replayStrategy==='set-value-first'),'range drag is self-describing');
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='sort' && s.dropTarget?.name?.includes('商品 B') && s.end.relativeTo==='dropTarget' && s.replayStrategy==='semantic-drop-first'),'sortable drag is self-describing');
+    assert(state.draft.steps.some(s=>s.action==='drag' && s.dragType==='canvas' && s.path.length>=2 && s.path.length<=24 && s.path.every(p=>p.relativeTo==='source') && s.replayStrategy==='path-first'),'canvas drag is self-describing');
     assert(state.draft.steps.some(s=>s.action==='scroll' && s.target.selector==='#scroller' && s.scrollY>0),'container scroll recorded');
     assert(state.draft.steps.filter(s=>s.action==='manual').length>=2);
     // A dynamically created same-origin drawer and nested child must both record.
@@ -214,7 +215,7 @@ async function poll(fn, predicate, label, timeout=6000) {
     state=await poll(get,s=>s.draft.branches?.length===1,'create branch from UI');
     const branchId=state.draft.selectedRouteId;
     assert.equal(JSON.stringify(state.draft.steps),mainSnapshot,'fork must preserve the main route');
-    assert.equal(state.draft.schemaVersion,2);assert.equal(state.draft.branches[0].afterStepId,anchor);
+    assert.equal(state.draft.schemaVersion,3);assert.equal(state.draft.branches[0].afterStepId,anchor);
     assert(await popup.locator('#sharedPrefix').isVisible());
     assert((await command('CONTINUE',{tabId})).ok);
     const oldCapture=(await get()).active.captureId;
@@ -248,7 +249,7 @@ async function poll(fn, predicate, label, timeout=6000) {
     const branchDownload=popup.waitForEvent('download');await popup.locator('#export').click();
     await (await branchDownload).saveAs(path.join(output,'branch-recording.json'));
     const exported=JSON.parse(fs.readFileSync(path.join(output,'branch-recording.json'),'utf8'));
-    assert.equal(exported.branches.length,3);assert.equal(exported.schemaVersion,2);
+    assert.equal(exported.branches.length,3);assert.equal(exported.schemaVersion,3);
     const ids=[...exported.steps,...exported.branches.flatMap(b=>b.steps)].map(s=>s.id);
     assert.equal(new Set(ids).size,ids.length,'IDs must be globally unique');
     assert(!JSON.stringify(exported).includes('STALE-BRANCH-EVENT'));

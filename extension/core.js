@@ -20,9 +20,10 @@
     }
     return result;
   }
-  function normalizedPoint(raw) {
+  function normalizedPoint(raw, relativeTo) {
     if (!raw || typeof raw !== 'object' || !Number.isFinite(raw.x) || !Number.isFinite(raw.y) || raw.x < 0 || raw.x > 1 || raw.y < 0 || raw.y > 1) return null;
-    return {x:Math.round(raw.x * 10000) / 10000,y:Math.round(raw.y * 10000) / 10000};
+    if (raw.relativeTo !== undefined && raw.relativeTo !== relativeTo) return null;
+    return {x:Math.round(raw.x * 10000) / 10000,y:Math.round(raw.y * 10000) / 10000,relativeTo};
   }
   function normalizeEvent(raw, captureValues) {
     if (!raw || !['navigate','click','fill','select','check','submit','keypress','manual','note','wait','drag','scroll'].includes(raw.action)) return null;
@@ -53,9 +54,13 @@
     if (raw.action === 'drag') {
       if (!['range','sort','element','canvas'].includes(raw.dragType)) return null;
       if (raw.dragType === 'range' && secret) { event.action='manual';event.reason='Sensitive field: complete manually; value was not recorded.';return event; }
-      const start=normalizedPoint(raw.start),end=normalizedPoint(raw.end);
+      if (raw.coordinateSystem !== undefined && (!raw.coordinateSystem || typeof raw.coordinateSystem !== 'object' || raw.coordinateSystem.unit !== 'ratio' || raw.coordinateSystem.origin !== 'top-left')) return null;
+      const endReference=['sort','element'].includes(raw.dragType) ? 'dropTarget' : 'source';
+      const strategy={range:'set-value-first',sort:'semantic-drop-first',element:'semantic-drop-first',canvas:'path-first'}[raw.dragType];
+      if (raw.replayStrategy !== undefined && raw.replayStrategy !== strategy) return null;
+      const start=normalizedPoint(raw.start,'source'),end=normalizedPoint(raw.end,endReference);
       if (!start || !end) return null;
-      event.dragType=raw.dragType;event.start=start;event.end=end;
+      event.dragType=raw.dragType;event.coordinateSystem={unit:'ratio',origin:'top-left'};event.start=start;event.end=end;event.replayStrategy=strategy;
       if (['sort','element'].includes(raw.dragType) && (!raw.dropTarget || typeof raw.dropTarget!=='object')) return null;
       if (raw.dropTarget) event.dropTarget=normalizedTarget(raw.dropTarget);
       if (raw.position) {
@@ -66,11 +71,12 @@
       if (raw.dragType === 'canvas') {
         if (!Array.isArray(raw.path) || raw.path.length < 2 || raw.path.length > 24) return null;
         event.path=[];
-        for (const item of raw.path) {const point=normalizedPoint(item);if(!point)return null;event.path.push(point);}
+        for (const item of raw.path) {const point=normalizedPoint(item,'source');if(!point)return null;event.path.push(point);}
       }
       if (raw.dragType === 'range') {
         if (captureValues && typeof raw.startValue === 'string') event.startValue=raw.startValue.slice(0,4000);
-        if (captureValues && typeof raw.value === 'string') event.value=raw.value.slice(0,4000);
+        const targetValue=typeof raw.targetValue === 'string' ? raw.targetValue : raw.value;
+        if (captureValues && typeof targetValue === 'string') event.targetValue=targetValue.slice(0,4000);
         else event.parameter=true;
       }
     }

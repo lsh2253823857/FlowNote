@@ -122,7 +122,7 @@ async function handle(message, sender) {
     if (WRR.isBlocked(tab.url, blacklist)) throw new Error('当前网站在黑名单中，请先移除再开始录制。');
     if (message.type === 'START') {
       if (draft) throw new Error('已有录制，请先导出或清除，避免覆盖。');
-      draft = { schemaVersion: 1, recorderVersion:chrome.runtime.getManifest().version, producer: 'windows-record-replay', id: crypto.randomUUID(), title: WRR.short(message.title || 'Browser workflow'), goal: WRR.short(message.goal, 1000), startedAt: new Date().toISOString(), captureValues: message.captureValues === true, steps: [] };
+      draft = { schemaVersion: 3, recorderVersion:chrome.runtime.getManifest().version, producer: 'windows-record-replay', id: crypto.randomUUID(), title: WRR.short(message.title || 'Browser workflow'), goal: WRR.short(message.goal, 1000), startedAt: new Date().toISOString(), captureValues: message.captureValues === true, steps: [] };
     } else if (!draft) throw new Error('没有可继续的录制。');
     if (WRR.allSteps(draft).length >= 1500 || JSON.stringify(draft).length > 3500000) throw new Error('本次录制已达到容量上限，请导出后新建录制。');
     WRR.routeSteps(draft);
@@ -153,7 +153,7 @@ async function handle(message, sender) {
       const condition = WRR.short(message.condition, 500);
       if (!condition) throw new Error('请填写什么情况下走这条分支');
       const branch = {id:crypto.randomUUID(),name:WRR.short(message.name,80) || '分支 '+((draft.branches || []).length+1),condition,parentBranchId:routeId,afterStepId:message.afterStepId,steps:[]};
-      draft.schemaVersion=2;draft.branches ||= [];draft.branches.push(branch);draft.selectedRouteId=branch.id;
+      if(draft.schemaVersion<2)draft.schemaVersion=2;draft.branches ||= [];draft.branches.push(branch);draft.selectedRouteId=branch.id;
     }
     if (message.type === 'SELECT_ROUTE') {
       WRR.routeSteps(draft, message.routeId);draft.selectedRouteId=message.routeId;

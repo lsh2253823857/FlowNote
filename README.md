@@ -5,7 +5,7 @@
 
 FlowNote 是面向 Windows 用户的**浏览器工作流录制工具**，由 Chrome / Edge 扩展（Manifest V3）和 Codex 插件两部分组成。你在网页上演示一遍操作（填表、拖动、排序、滚动、查询、下载报表……），扩展会记录关键步骤；你可以补充说明、添加等待和条件分支并导出 JSON，再由 Codex 整理成可编辑、可复用的 Skill，之后交给 Codex 按实时页面执行。
 
-**当前版本：v0.7.1**（含拖动/滚动识别、可配置等待和条件分支）。显示名称为 **FlowNote · 流程笔记**；为了兼容已有安装和录制文件，内部插件 ID、Skill 名称及录制来源标识仍使用 `windows-record-replay`。
+**当前版本：v0.8.0**（含自解释拖动 JSON、滚动识别、可配置等待和条件分支）。显示名称为 **FlowNote · 流程笔记**；为了兼容已有安装和录制文件，内部插件 ID、Skill 名称及录制来源标识仍使用 `windows-record-replay`。
 
 ---
 
@@ -120,6 +120,23 @@ python scripts/recording_to_skill.py recording.json --name daily-report-download
 
 拖入本地文件时不会保存文件路径或内容，只保留需要在回放时重新选择文件的手动提示。生成 Skill 后，如果当前浏览器工具不支持拖动、Canvas 轨迹或指定容器滚动，Codex 应要求人工完成该步骤，不能擅自改成点击。
 
+新录制使用 schema v3。拖动 JSON 会直接声明单位、原点、参照元素和重放策略，不需要 AI 猜测坐标含义：
+
+```json
+{
+  "action": "drag",
+  "dragType": "range",
+  "coordinateSystem": {"unit": "ratio", "origin": "top-left"},
+  "start": {"x": 0.2, "y": 0.5, "relativeTo": "source"},
+  "end": {"x": 0.8, "y": 0.5, "relativeTo": "source"},
+  "startValue": "20",
+  "targetValue": "80",
+  "replayStrategy": "set-value-first"
+}
+```
+
+`ratio` 表示 0～1 的元素内比例，原点为左上角。`relativeTo` 指明坐标相对于被拖元素还是 `dropTarget`；滑块优先使用运行时目标值，坐标仅作为备用提示。旧版 schema v1/v2 以及旧字段 `value` 仍可由转换器读取并补齐这些语义。
+
 ---
 
 ## 🔀 条件分支
@@ -143,7 +160,7 @@ python scripts/recording_to_skill.py recording.json --name daily-report-download
 - 执行时满足某条分支条件就沿该分支继续，跳过原路线剩余步骤；没有条件匹配时继续原路线；分支结束后不会自动接回原路线。
 - 多个条件同时匹配或无法判断时，需要澄清。条件由 Codex 结合实时页面理解，扩展本身不自动判断和回放。
 - 支持同一起点多个分支和分支内再分支，最多 20 个；步骤编号跨路线唯一且保持稳定；删除分支会同时删除其子分支。
-- 含分支的录制采用 schema v2；原有无分支录制（schema v1）仍可使用。
+- 新录制采用 schema v3；schema v2 的分支录制和 schema v1 的早期录制仍可使用。
 
 ---
 
@@ -172,6 +189,7 @@ python scripts/recording_to_skill.py recording.json --name daily-report-download
 ## ✅ 测试
 
 - `tests/test_converter.py`：验证参数化、拖动/滚动、等待步骤、拒绝覆盖、敏感字段清理和无效文件处理（Python 标准库）。
+- `tests/core.test.cjs`：不依赖浏览器，验证自解释拖动字段、旧字段兼容和非法元数据拒绝。
 - `tests/browser-smoke.cjs`：在隔离 Chromium 用户目录和本地测试页面上验证扩展实际录制、拖动、滚动、等待步骤和分支流程（需要 Node.js、Playwright 和 Chromium；可用 `WRR_PLAYWRIGHT` / `WRR_CHROMIUM` 环境变量指定本地运行时）。
 
 > 浏览器端"加载已解压扩展"和真实业务网站的兼容性需要在用户浏览器中验证；测试通过不代表所有网站都兼容。
